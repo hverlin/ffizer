@@ -151,10 +151,13 @@ pub(crate) fn ask_variables(
             }
         };
         let resp = if variable.hidden || ctx.cmd_opt.no_interaction {
-            request.default_value.unwrap_or(VariableResponse {
+            let response = VariableResponse {
                 value: "".to_owned(),
                 idx: None,
-            })
+            };
+            let value = request.default_value.unwrap_or(response);
+            TERM.write_line(&format!("  - {}: {}", &name, (&value).value))?;
+            value
         } else {
             ask_variable_value(request)?
         };
@@ -377,22 +380,11 @@ pub fn confirm_run_script(
     script: impl std::fmt::Display,
     default_confirm_answer: bool,
 ) -> Result<bool> {
-    // let s = format!(
-    //     "   - {} \x1B[38;2;{};{};{}m{}\x1B[0m{}",
-    //     format_operation(&a.operation),
-    //     80,
-    //     80,
-    //     80,
-    //     prefix,
-    //     p.file_name().and_then(|v| v.to_str()).unwrap_or("???"),
-    // );
-    // TERM.write_line(&s).context(crate::Io {})?;
-
     println!(
         "\n command to run:\n\t from template: {}\n\t commands:\n{}",
         template_name, script
     );
-    if ctx.cmd_opt.no_interaction {
+    let should_run_command = if ctx.cmd_opt.no_interaction {
         Ok(default_confirm_answer)
     } else {
         Confirm::with_theme(&(*PROMPT_THEME))
@@ -400,5 +392,13 @@ pub fn confirm_run_script(
             .default(default_confirm_answer)
             .interact()
             .map_err(Error::from)
+    };
+
+    if should_run_command.as_ref().is_ok_and(|v| v == &true) {
+        println!("\nRunning command `{}`", script)
+    } else {
+        println!("Skipping command {}", script)
     }
+
+    should_run_command
 }

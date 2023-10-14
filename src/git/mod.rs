@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 use std::{io, process};
 
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::error::Error;
 
@@ -57,7 +57,7 @@ where
             return Ok(());
         }
         Err(e) => {
-            error!("Oops, fail with git2: {e:?}. Will try with `git` if installed.");
+            warn!("Oops, fail with git2: {e:?}. Will try with `git` if installed.");
         }
     }
 

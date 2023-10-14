@@ -77,6 +77,7 @@ pub fn process(ctx: &Ctx) -> Result<()> {
     debug!("defining plan of rendering");
     let actions = plan(ctx, source_files, &variables)?;
     if ui::confirm_plan(ctx, &actions)? {
+        println!("\nExecuting plan...");
         debug!("executing plan of rendering");
         execute(ctx, &actions, &variables)?;
         debug!("running scripts");
@@ -219,12 +220,26 @@ fn execute(ctx: &Ctx, actions: &[Action], variables: &Variables) -> Result<()> {
                         source,
                     })?
                 } else {
+                    let mode_init = if ctx.cmd_opt.update_mode.eq(&UpdateMode::Ask) && ctx.cmd_opt.no_interaction {
+                        pb.suspend(|| {
+                            println!("No interaction mode, keeping existing file {}. (Use --update-mode=<option> to override.)", &a.dst_path.relative.display());
+                        });
+                        &UpdateMode::Keep
+                    } else {
+                        if ctx.cmd_opt.no_interaction {
+                            pb.suspend(|| {
+                                println!("{}: {}", &ctx.cmd_opt.update_mode, &a.dst_path.relative.display());
+                            });
+                        }
+                        &ctx.cmd_opt.update_mode
+                    };
+
                     update_file(
                         //FIXME to use all the source
                         &PathBuf::from(a.src[0].childpath()),
                         &local,
                         &remote,
-                        &ctx.cmd_opt.update_mode,
+                        &mode_init,
                     )?
                 }
             }
